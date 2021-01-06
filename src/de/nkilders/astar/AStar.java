@@ -1,4 +1,4 @@
-package de.noah.astar;
+package de.nkilders.astar;
 
 import javax.swing.*;
 import java.awt.*;
@@ -33,7 +33,7 @@ public class AStar {
     Node lastChecked;
 
     long started;
-    de.noah.astar.Timer t = new Timer();
+    Timer t = new Timer();
 
     public AStar() {
         System.err.println("Loading...");

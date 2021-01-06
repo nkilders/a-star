@@ -1,4 +1,4 @@
-import de.noah.astar.AStar;
+import de.nkilders.astar.AStar;
 
 public class Start {
 

@@ -1,4 +1,4 @@
-package de.noah.astar;
+package de.nkilders.astar;
 
 public class Timer {
     private long last;
