@@ -2,7 +2,7 @@
 
 Implementation of the A* pathfinding algorithm in Java with a graphical visualization
 
-[![java-2021-01-06-17-21-55.png](https://i.postimg.cc/rFkVT6ZX/java-2021-01-06-17-21-55.png)](https://postimg.cc/PNSsb7k2)
+[![java-2021-01-06-17-47-10.png](https://i.postimg.cc/s2rfVkgZ/java-2021-01-06-17-47-10.png)](https://postimg.cc/YvdBRygp)
 
 ## Settings
 
