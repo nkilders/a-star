@@ -269,7 +269,7 @@ public class AStar {
             if (y - 1 >= 0)
                 if (!grid[x][y - 1].wall)
                     neighbors.add(grid[x][y - 1]);
-            if (y + 1 < gridWidth)
+            if (y + 1 < gridHeight)
                 if (!grid[x][y + 1].wall)
                     neighbors.add(grid[x][y + 1]);
 
