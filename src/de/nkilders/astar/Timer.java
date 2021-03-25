@@ -1,21 +1,21 @@
 package de.nkilders.astar;
 
 public class Timer {
-    private long last;
+    private long startTime;
 
     public Timer() {
         reset();
     }
 
-    public boolean hasReached(long l) {
-        return currentMS() - last >= l;
+    public boolean hasReached(long time) {
+        return currentTime() - startTime >= time;
     }
 
     public void reset() {
-        last = currentMS();
+        startTime = currentTime();
     }
 
-    private long currentMS() {
+    private long currentTime() {
         return System.nanoTime() / 1000000L;
     }
 }
