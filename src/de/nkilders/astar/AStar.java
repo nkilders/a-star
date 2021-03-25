@@ -1,7 +1,12 @@
 package de.nkilders.astar;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -12,13 +17,14 @@ public class AStar {
     final int nodeSize = 15; // for rendering
     final int gridWidth = 50;
     final int gridHeight = 50;
-    final long sleepTime = 5L;
+    final long sleepTime = 5L; // delay between the algorithm's steps
     final float barriers = 0.25F;
     final boolean allowDiagonals = true;
+    final boolean randomStartAndEnd = false;
     // ====================== //
 
     JFrame frame;
-    JPanel cont;
+    JPanel content;
 
     Node[][] grid;
 
@@ -32,25 +38,24 @@ public class AStar {
 
     Node lastChecked;
 
-    long started;
-    Timer t = new Timer();
+    long startTime;
+    Timer timer = new Timer();
 
     public AStar() {
-        System.err.println("Loading...");
-        System.err.println();
-        System.err.println("== SETTINGS ==");
-        System.err.println("Size: " + gridWidth + "x" + gridHeight);
-        System.err.println("Barriers: " + (int) (barriers * 100) + "%");
-        System.err.println("Allow diagonals: " + allowDiagonals);
-        System.err.println();
+        System.out.println();
+        System.out.println("== SETTINGS ==");
+        System.out.printf("%-11s %dx%d%n", "Size:", gridWidth, gridHeight);
+        System.out.printf("%-11s %d%%%n", "Barriers:", (int) (barriers * 100));
+        System.out.printf("%-11s %s%n", "Diagonals:", allowDiagonals ? "Allowed" : "Not allowed");
+        System.out.println();
 
-        // create nodes
         grid = new Node[gridWidth][gridHeight];
         nodes = new ArrayList<>();
         openList = new LinkedList<>();
         closedList = new ArrayList<>();
         path = new ArrayList<>();
 
+        // create nodes
         for (int x = 0; x < gridWidth; x++) {
             for (int y = 0; y < gridHeight; y++) {
                 Node n = new Node(x, y);
@@ -59,34 +64,38 @@ public class AStar {
             }
         }
 
-        // set start + end
-        Random r = new Random();
-        start = grid[r.nextInt(gridWidth)][r.nextInt(gridHeight)];
-        end = grid[r.nextInt(gridWidth)][r.nextInt(gridHeight)];
-        start = grid[0][0];
-        end = grid[gridWidth - 1][gridHeight - 1];
+        // set start- and end-node
+        if (randomStartAndEnd) {
+            Random r = new Random();
+            start = grid[r.nextInt(gridWidth)][r.nextInt(gridHeight)];
+            end = grid[r.nextInt(gridWidth)][r.nextInt(gridHeight)];
+        } else {
+            start = grid[0][0];
+            end = grid[gridWidth - 1][gridHeight - 1];
+        }
 
         start.wall = false;
         end.wall = false;
 
         // find neighbors
-        for (Node n : nodes)
+        for (Node n : nodes) {
             n.findNeighbors();
+        }
 
         // create window
-        frame = new JFrame("A*");
-        frame.setDefaultCloseOperation(3);
-        frame.setSize(gridWidth * nodeSize + 7, gridHeight * nodeSize + 30);
+        frame = new JFrame("A* Algorithm");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(gridWidth * nodeSize + 20, gridHeight * nodeSize + 40);
         frame.setLocationRelativeTo(null);
         frame.setResizable(false);
 
-        cont = new JPanel();
-        cont.setLayout(null);
-        frame.setContentPane(cont);
+        content = new JPanel();
+        content.setLayout(null);
+        frame.setContentPane(content);
 
         C c = new C();
         c.setBounds(0, 0, frame.getWidth(), frame.getHeight());
-        cont.add(c);
+        content.add(c);
 
         frame.setVisible(true);
 
@@ -95,8 +104,7 @@ public class AStar {
     }
 
     void startAlgorithm() {
-        System.err.println("Finding path...");
-        started = System.currentTimeMillis();
+        startTime = System.currentTimeMillis();
 
         openList.add(start);
 
@@ -105,10 +113,11 @@ public class AStar {
 
         // find path
         while (!openList.isEmpty()) {
-            if (!t.hasReached(sleepTime))
+            if (!timer.hasReached(sleepTime)) {
                 continue;
+            }
 
-            t.reset();
+            timer.reset();
 
             Node current = lastChecked = minF();
 
@@ -116,58 +125,65 @@ public class AStar {
             closedList.add(current);
 
             if (current == end) {
-                long l = System.currentTimeMillis() - started;
-                System.err.println("Done in " + l + "ms (" + (l / 1000.0F) + "sec)");
+                long time = System.currentTimeMillis() - startTime;
+                System.out.printf("Done in %dms (%.3fsec)%n", time, (time / 1000F));
+
                 findPath();
-                System.err.println("Path length: " + path.size());
+                System.out.printf("Path length: %d%n", path.size());
+
                 return;
             }
 
-            for (Node n : current.neighbors) {
-                if (closedList.contains(n))
+            for (Node node : current.neighbors) {
+                if (closedList.contains(node)) {
                     continue;
+                }
 
-                if (n.wall)
+                if (node.wall) {
                     continue;
+                }
 
-                if (!openList.contains(n))
-                    openList.add(n);
+                if (!openList.contains(node)) {
+                    openList.add(node);
+                }
 
-                double v = current.g + heuristic(current, n);
-                if (v >= n.g)
+                double v = current.g + heuristic(current, node);
+                if (v >= node.g) {
                     continue;
+                }
 
-                n.parent = current;
-                n.g = v;
-                n.f = n.g + (n.h = heuristic(n, end));
+                node.parent = current;
+                node.g = v;
+                node.f = node.g + (node.h = heuristic(node, end));
             }
         }
 
         findPath();
-        System.err.println("No path found!");
+        System.out.println("No path found!");
     }
 
     // get node with min f value
     Node minF() {
-        Node m = null;
+        Node min = null;
 
-        for (Node n : openList) {
-            if (m == null)
-                m = n;
-            else if (n.f < m.f)
-                m = n;
+        for (Node node : openList) {
+            if (min == null) {
+                min = node;
+            } else if (node.f < min.f) {
+                min = node;
+            }
         }
 
-        return m;
+        return min;
     }
 
     // get distance a->b
     double heuristic(Node a, Node b) {
         if (allowDiagonals) {
-            int x = a.x - b.x;
-            int y = a.y - b.y;
+            int xDiff = a.x - b.x;
+            int yDiff = a.y - b.y;
 
-            return Math.sqrt(x * x + y * y);
+            return Math.sqrt(xDiff * xDiff + yDiff * yDiff);
         } else {
             return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
         }
@@ -175,16 +191,18 @@ public class AStar {
 
     // save found path
     void findPath() {
-        if (lastChecked == null)
+        if (lastChecked == null) {
             return;
+        }
 
         path.clear();
 
-        Node t = lastChecked;
-        path.add(t);
-        while (t.parent != null) {
-            path.add(t.parent);
-            t = t.parent;
+        Node node = lastChecked;
+        path.add(node);
+
+        while (node.parent != null) {
+            path.add(node.parent);
+            node = node.parent;
         }
     }
 
@@ -194,8 +212,9 @@ public class AStar {
             super.paintComponent(graphics);
             final Graphics2D g = (Graphics2D) graphics;
 
-            for (Node n : nodes)
-                n.draw(g);
+            for (Node node : nodes) {
+                node.draw(g);
+            }
 
             g.setColor(Color.YELLOW);
             g.setStroke(new BasicStroke(2));
@@ -203,11 +222,13 @@ public class AStar {
 
             if (path != null) {
                 Node t = null;
-                for (Node n : path) {
-                    if (t != null && n != null)
-                        g.drawLine(t.x * nodeSize, t.y * nodeSize, n.x * nodeSize, n.y * nodeSize);
 
-                    t = n;
+                for (Node node : path) {
+                    if (t != null && node != null) {
+                        g.drawLine(t.x * nodeSize, t.y * nodeSize, node.x * nodeSize, node.y * nodeSize);
+                    }
+
+                    t = node;
                 }
             }
 
@@ -216,7 +237,7 @@ public class AStar {
     }
 
     class Node {
-        // pos
+        // position
         final int x;
         final int y;
 
@@ -227,31 +248,29 @@ public class AStar {
         // cost this->end
         double h = Integer.MAX_VALUE;
 
-        // stuff
         Node parent = null;
         boolean wall;
-        List<Node> neighbors = new ArrayList<>();
+        List<Node> neighbors;
 
         public Node(int x, int y) {
             this.x = x;
             this.y = y;
             this.wall = Math.random() < barriers;
+            this.neighbors = new ArrayList<>();
         }
 
         void draw(Graphics2D g) {
-            g.setColor(wall ? Color.BLACK : Color.WHITE);
-
-            if (closedList.contains(this))
+            if (closedList.contains(this)) {
                 g.setColor(new Color(0, 0, 0, 100));
-
-            if (openList.contains(this))
+            } else if (openList.contains(this)) {
                 g.setColor(new Color(0, 0, 0, 150));
-
-            if (lastChecked == this)
+            } else if (lastChecked == this) {
                 g.setColor(Color.MAGENTA);
-
-            if (this == start || this == end)
+            } else if (this == start || this == end) {
                 g.setColor(Color.GREEN);
+            } else {
+                g.setColor(wall ? Color.BLACK : Color.WHITE);
+            }
 
             g.fillRect(x * nodeSize, y * nodeSize, nodeSize, nodeSize);
 
@@ -260,32 +279,54 @@ public class AStar {
         }
 
         void findNeighbors() {
-            if (x - 1 >= 0)
-                if (!grid[x - 1][y].wall)
-                    neighbors.add(grid[x - 1][y]);
-            if (x + 1 < gridWidth)
-                if (!grid[x + 1][y].wall)
-                    neighbors.add(grid[x + 1][y]);
-            if (y - 1 >= 0)
-                if (!grid[x][y - 1].wall)
-                    neighbors.add(grid[x][y - 1]);
-            if (y + 1 < gridHeight)
-                if (!grid[x][y + 1].wall)
-                    neighbors.add(grid[x][y + 1]);
+            // left
+            if (x > 0 && !grid[x - 1][y].wall) {
+                neighbors.add(grid[x - 1][y]);
+            }
+
+            // right
+            if (x + 1 < gridWidth && !grid[x + 1][y].wall) {
+                neighbors.add(grid[x + 1][y]);
+            }
+
+            // above
+            if (y > 0 && !grid[x][y - 1].wall) {
+                neighbors.add(grid[x][y - 1]);
+            }
+
+            // below
+            if (y + 1 < gridHeight && !grid[x][y + 1].wall) {
+                neighbors.add(grid[x][y + 1]);
+            }
 
             if (allowDiagonals) {
-                if (x > 0 && y > 0)
-                    if (!(grid[x - 1][y].wall || grid[x][y - 1].wall))
+                // left above
+                if (x > 0 && y > 0) {
+                    if (!grid[x - 1][y].wall && !grid[x][y - 1].wall) {
                         neighbors.add(grid[x - 1][y - 1]);
-                if (x < gridWidth - 1 && y > 0)
-                    if (!(grid[x + 1][y].wall || grid[x][y - 1].wall))
+                    }
+                }
+
+                // right above
+                if (x < gridWidth - 1 && y > 0) {
+                    if (!grid[x + 1][y].wall && !grid[x][y - 1].wall) {
                         neighbors.add(grid[x + 1][y - 1]);
-                if (x < gridWidth - 1 && y < gridHeight - 1)
-                    if (!(grid[x + 1][y].wall || grid[x][y + 1].wall))
+                    }
+                }
+
+                // right below
+                if (x < gridWidth - 1 && y < gridHeight - 1) {
+                    if (!grid[x + 1][y].wall && !grid[x][y + 1].wall) {
                         neighbors.add(grid[x + 1][y + 1]);
-                if (x > 0 && y < gridHeight - 1)
-                    if (!(grid[x - 1][y].wall || grid[x][y + 1].wall))
+                    }
+                }
+
+                // left below
+                if (x > 0 && y < gridHeight - 1) {
+                    if (!grid[x - 1][y].wall && !grid[x][y + 1].wall) {
                         neighbors.add(grid[x - 1][y + 1]);
+                    }
+                }
             }
         }
     }
